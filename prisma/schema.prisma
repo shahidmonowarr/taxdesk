@@ -1,0 +1,82 @@
+// TaxDesk data model.
+// Every Client row belongs to exactly one User (ownerId); all reads and writes
+// filter by the signed-in user's id, so ownership is enforced in one place.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  PREPARER
+}
+
+enum FilingStatus {
+  SINGLE
+  MARRIED_JOINT
+  MARRIED_SEPARATE
+  HEAD_OF_HOUSEHOLD
+  QUALIFYING_SURVIVING_SPOUSE
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(PREPARER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+  clients      Client[]
+}
+
+/// Server-side session. The cookie holds a random token; only its SHA-256
+/// hash is stored, so a leaked database cannot be replayed as cookies.
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// A taxpayer the preparer works for. Dummy data only.
+model Client {
+  id           String       @id @default(cuid())
+  ownerId      String
+  owner        User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  firstName    String
+  lastName     String
+  email        String
+  phone        String?
+  taxYear      Int
+  filingStatus FilingStatus
+  /// Only the last four digits of the SSN are ever stored.
+  ssnLast4     String?
+  notes        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([ownerId, email, taxYear])
+  @@index([ownerId, lastName])
+}
+
+/// One row per failed sign-in, used for rate limiting. Kept in the database
+/// (not process memory) because serverless instances do not share memory.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}

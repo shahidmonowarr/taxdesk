@@ -1,0 +1,6 @@
+src/generated
+.next
+playwright-report
+test-results
+coverage
+prisma/migrations
