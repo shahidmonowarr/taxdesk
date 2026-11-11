@@ -52,6 +52,8 @@ test.describe("authentication", () => {
   });
 
   test("register validates input, then signs the new user in", async ({ page }) => {
+    // Creates an account each run; never leave those behind on the live demo.
+    test.skip(!!process.env.E2E_BASE_URL, "writes a new user; local/CI only");
     await page.goto("/register");
     await page.getByLabel("Full name").fill("New Preparer");
     await page.getByLabel("Email").fill(`new-${Date.now()}@test.dev`);

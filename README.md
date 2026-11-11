@@ -4,7 +4,7 @@ A small, production-shaped base project for a tax-preparation web app. A prepare
 
 It is deliberately small. The point is the foundation: authentication done properly, one strict path to the database, validation on the server, errors that never leak, and tests at every layer.
 
-**Live demo:** _<add Vercel URL>_
+**Live demo:** https://taxdesk-ten.vercel.app · health check: [/api/health](https://taxdesk-ten.vercel.app/api/health)
 **Demo login:** `demo@taxdesk.dev` / `DemoPass2026`
 
 **Latest test run:** [TEST_RESULTS.md](TEST_RESULTS.md) — 63/63 passing
@@ -99,11 +99,13 @@ Every test name and its result from the latest full run is in **[TEST_RESULTS.md
 
 `.github/workflows/ci.yml` runs the same checks on every push: lint, typecheck and unit tests, then integration and end-to-end tests against a Postgres 17 service container. Each run writes a results table to the job summary and uploads the Playwright HTML report as an artifact.
 
-The same end-to-end suite can run against the deployed demo without resetting its data:
+The same end-to-end suite runs against the live demo without resetting its data. The register test is skipped there so it doesn't leave accounts behind, and the CRUD test deletes what it creates:
 
 ```bash
-E2E_BASE_URL=https://<demo-url> npx playwright test auth.spec.ts
+E2E_BASE_URL=https://taxdesk-ten.vercel.app npx playwright test
 ```
+
+Last run against the live demo (2026-11-11): **10 passed, 1 skipped (register)**.
 
 ## Local setup
 
