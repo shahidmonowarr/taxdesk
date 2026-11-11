@@ -22,7 +22,7 @@ It is deliberately small. The point is the foundation: authentication done prope
 | Validation | Zod 4, one schema shared by forms and server |
 | Auth | Session-based, built in-house: argon2id + hashed session tokens in Postgres |
 | Tests | Vitest (unit + integration on a real database), Playwright (end-to-end) |
-| CI / hosting | GitHub Actions, Vercel |
+| Hosting | Vercel (deploys on every push to `main`) |
 
 ## Architecture
 
@@ -97,7 +97,7 @@ Every test name and its result from the latest full run is in **[TEST_RESULTS.md
 | Integration (20) | Against a real Postgres: registration, login, lockout, session expiry/sliding/revocation, CRUD, **cross-user isolation** | `npm run test:integration` |
 | End-to-end (11) | Real browser against a production build: redirect-and-return, validation messages, cookie flags, logout revocation, full client CRUD, duplicate handling, 404, JSON API, health | `npm run test:e2e` |
 
-`.github/workflows/ci.yml` runs the same checks on every push: lint, typecheck and unit tests, then integration and end-to-end tests against a Postgres 17 service container. Each run writes a results table to the job summary and uploads the Playwright HTML report as an artifact.
+Before every push, `npm run lint`, `npm run typecheck` and `npm run test:report` are run locally. There is no hosted CI for now.
 
 The same end-to-end suite runs against the live demo without resetting its data. The register test is skipped there so it doesn't leave accounts behind, and the CRUD test deletes what it creates:
 
