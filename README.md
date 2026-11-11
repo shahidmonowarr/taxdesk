@@ -1,13 +1,13 @@
 # TaxDesk
 
-A small, production-shaped base project for a tax-preparation web app. A preparer signs in, sees a dashboard, and creates, searches, edits and deletes client records. All data is dummy data.
+A small, production-shaped base project for a tax-preparation web app: registration, sign-in and sign-out, a protected dashboard, and PostgreSQL access through Prisma. All data is dummy data.
 
-It is deliberately small. The point is the foundation: authentication done properly, one strict path to the database, validation on the server, errors that never leak, and tests at every layer.
+It is deliberately small, with no domain features yet. The point is the foundation the next feature lands on: authentication done properly, one strict path to the database, validation on the server, errors that never leak, and tests at every layer.
 
 **Live demo:** https://taxdesk-ten.vercel.app · health check: [/api/health](https://taxdesk-ten.vercel.app/api/health)
-**Demo login:** `demo@taxdesk.dev` / `DemoPass2026`
+**Demo logins:** `demo@taxdesk.dev` / `DemoPass2026` (preparer) · `admin@taxdesk.dev` / `AdminPass2026` (admin)
 
-**Latest test run:** [TEST_RESULTS.md](TEST_RESULTS.md) — 63/63 passing
+**Latest test run:** [TEST_RESULTS.md](TEST_RESULTS.md) — 47/47 passing
 
 ---
 
@@ -39,10 +39,10 @@ flowchart LR
   G[requireUser / getCurrentUser<br/>the only auth check] --> S[(Session table)]
 
   SA -->|Zod parse| V[lib/validation.ts]
-  RSC --> SVC[server/clients.service.ts<br/>every query filtered by ownerId]
-  SA --> SVC
-  RH --> SVC
-  SVC --> DB[(PostgreSQL via Prisma)]
+  SA --> AUTH[server/auth/*<br/>argon2id · sessions · rate limit]
+  RSC --> SVC[server/*.service.ts<br/>queries scoped to the signed-in user]
+  AUTH --> DB[(PostgreSQL via Prisma)]
+  SVC --> DB
 ```
 
 A request moves through these layers in order:
@@ -50,17 +50,17 @@ A request moves through these layers in order:
 1. **`src/proxy.ts`** sends visitors with no session cookie to `/login?next=…` before anything renders. This is for user experience only. It can't tell a valid cookie from a forged one.
 2. **`src/server/auth/guard.ts`** is the real check. Every protected page, Server Action and Route Handler calls `requireUser()` or `getCurrentUser()`. The token is hashed and looked up in `Session`, and an expired session is deleted. The result is cached per request with React `cache()`.
 3. **`src/lib/validation.ts`** holds the Zod schemas. The server parses every input; the HTML attributes only mirror the rules for convenience.
-4. **`src/server/*.service.ts`** holds the business logic. It is plain TypeScript with no Next.js imports, which makes it testable. Every function takes `ownerId` first, and every query filters on it.
+4. **`src/server/*.service.ts`** holds the business logic. It is plain TypeScript with no Next.js imports, which makes it testable. A service takes the signed-in user's id from the guard, never from the request.
 5. **`src/app/actions/*`** is a thin layer: parse → call service → map expected errors to a `FormState` → redirect.
 
 ```
 src/
 ├─ app/
 │  ├─ (public)/login, register     sign-in / sign-up
-│  ├─ (app)/dashboard, clients/…   protected workspace
-│  ├─ actions/                     Server Actions (auth, clients)
-│  ├─ api/health                   DB reachability check
-│  └─ api/clients                  JSON read API, same auth + ownership rules
+│  ├─ (app)/dashboard              protected: account, session, live DB check
+│  ├─ actions/auth.ts              Server Actions: login, register, logout
+│  ├─ api/health                   DB reachability check (public)
+│  └─ api/me                       signed-in user as JSON, 401 otherwise
 ├─ server/                         server-only: db, auth, services, errors
 ├─ lib/                            shared: validation, result types, safe redirect
 ├─ components/                     form fields, submit button, alerts
@@ -77,15 +77,15 @@ tests/unit · tests/integration · tests/e2e
 
 **Brute-force protection.** After 5 failed sign-ins, the email is locked for 15 minutes. Failed attempts are stored in Postgres, not in memory, because serverless instances don't share memory.
 
-**Ownership is enforced in the query.** It isn't a check that runs after the query. `updateMany` / `deleteMany` use `{ id, ownerId }`, which avoids a read-then-write race. Another user's record looks exactly like a missing one (`NOT_FOUND`), so ids can't be probed. Integration tests cover list, read, update and delete for this.
+**Data is scoped to the signed-in user.** Services take the user id from `requireUser()`, never from a form field or URL. The Zod schemas drop unknown fields, so a posted `role` or `userId` is ignored (unit-tested). The dashboard and `/api/me` return only safe fields; the password hash never leaves `server/auth`.
 
-**Errors.** Expected failures (`AppError`: not found, conflict, rate-limited) become a friendly message, attached to the right field when there is one. Unexpected errors are logged on the server and show a generic message plus a reference. Stack traces and database errors never reach the browser. A failed form keeps what the user typed, except passwords.
+**Errors.** Expected failures (`AppError`: not found, conflict, rate-limited, wrong credentials) become a friendly message, attached to the right field when there is one. Unexpected errors are logged on the server and show a generic message plus a reference. Stack traces and database errors never reach the browser. A failed form keeps what the user typed, except passwords.
 
-**Forms work without JavaScript.** They are Server Actions with progressive enhancement. With JavaScript on, the submit button is disabled while a request is in flight, so a double click can't create two records.
+**Forms work without JavaScript.** They are Server Actions with progressive enhancement. With JavaScript on, the submit button is disabled while a request is in flight, so a double click can't submit twice.
 
-**Sensitive data.** Only the last 4 digits of an SSN can be stored, and the schema rejects a full one. Security headers (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`) are set in `next.config.ts`. The cookie is `httpOnly`, `SameSite=Lax`, and `Secure` in production.
+**Headers and cookies.** Security headers (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`) are set in `next.config.ts`. The cookie is `httpOnly`, `SameSite=Lax`, and `Secure` in production.
 
-**Cache Components.** This is Next 16's default model. Session reads stream in behind `<Suspense>`, while the static shell (header, page titles) prerenders. The session check calls `connection()`, so time-dependent expiry checks never run during a prerender. One side effect: a missing record renders the not-found page with HTTP 200 plus `noindex`, because the status line is already sent when streaming starts.
+**Cache Components.** This is Next 16's default model. Session reads stream in behind `<Suspense>`, while the static shell (header, page titles) prerenders. The session check calls `connection()`, so time-dependent expiry checks never run during a prerender.
 
 ## Tests
 
@@ -93,13 +93,13 @@ Every test name and its result from the latest full run is in **[TEST_RESULTS.md
 
 | Suite | What it proves | Command |
 |---|---|---|
-| Unit (32) | Zod rules, argon2 hashing, token format, open-redirect guard | `npm test` |
-| Integration (20) | Against a real Postgres: registration, login, lockout, session expiry/sliding/revocation, CRUD, **cross-user isolation** | `npm run test:integration` |
-| End-to-end (11) | Real browser against a production build: redirect-and-return, validation messages, cookie flags, logout revocation, full client CRUD, duplicate handling, 404, JSON API, health | `npm run test:e2e` |
+| Unit (21) | Zod rules, argon2 hashing, token format, open-redirect guard | `npm test` |
+| Integration (15) | Against a real Postgres: registration, login, lockout, session expiry/sliding/revocation, account overview scoped to one user | `npm run test:integration` |
+| End-to-end (11) | Real browser against a production build: redirect-and-return, open-redirect guard, validation messages, cookie flags, logout revocation, dashboard + live DB check, per-user data, `/api/me`, health, 404 | `npm run test:e2e` |
 
 Before every push, `npm run lint`, `npm run typecheck` and `npm run test:report` are run locally. There is no hosted CI for now.
 
-The same end-to-end suite runs against the live demo without resetting its data. The register test is skipped there so it doesn't leave accounts behind, and the CRUD test deletes what it creates:
+The same end-to-end suite runs against the live demo without resetting its data. The register test is skipped there so it doesn't leave accounts behind:
 
 ```bash
 E2E_BASE_URL=https://taxdesk-ten.vercel.app npx playwright test
@@ -131,7 +131,7 @@ Each new feature follows the same path:
 
 1. Model in `prisma/schema.prisma`, then `npm run db:migrate -- --name <change>`
 2. Zod schema in `src/lib/validation.ts`, plus unit tests
-3. Service functions in `src/server/`, taking `ownerId` first, plus integration tests including an isolation case
+3. Service functions in `src/server/`, scoped by the signed-in user's id, plus integration tests, including one proving user A can't see user B's rows
 4. Server Action: `requireUser()` → parse → service → `toFormError`
 5. Page: a static shell plus a `<Suspense>` content component that calls `requireUser()`
 6. An end-to-end test of the user-visible flow

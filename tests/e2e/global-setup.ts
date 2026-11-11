@@ -16,7 +16,7 @@ export default async function globalSetup() {
 
   const pg = new Client({ connectionString: url });
   await pg.connect();
-  await pg.query('TRUNCATE "Client", "Session", "LoginAttempt", "User" RESTART IDENTITY CASCADE');
+  await pg.query('TRUNCATE "Session", "LoginAttempt", "User" RESTART IDENTITY CASCADE');
   await pg.end();
 
   execSync("npx prisma db seed", { stdio: "inherit", env });

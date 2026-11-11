@@ -8,10 +8,10 @@ export default function Home() {
       <Logo />
       <div className="space-y-4">
         <h1 className="text-4xl font-semibold tracking-tight text-slate-900">
-          Client records for tax preparers.
+          A secure foundation for a tax-preparation app.
         </h1>
         <p className="max-w-xl text-lg text-slate-600">
-          A small, production-shaped base project: session authentication, a protected workspace,
+          A small, production-shaped base project: session authentication, a protected dashboard,
           validated forms, PostgreSQL through Prisma, and tests at every layer.
         </p>
       </div>

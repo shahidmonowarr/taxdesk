@@ -1,6 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
 export const DEMO = { email: "demo@taxdesk.dev", password: "DemoPass2026", name: "Dana Preparer" };
+export const ADMIN = { email: "admin@taxdesk.dev", password: "AdminPass2026", name: "Avi Admin" };
 
 export async function signIn(page: Page, email = DEMO.email, password = DEMO.password) {
   await page.goto("/login");

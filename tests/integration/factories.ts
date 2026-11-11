@@ -1,6 +1,5 @@
 import { db } from "@/server/db";
 import { hashPassword } from "@/server/auth/password";
-import type { ClientInput } from "@/lib/validation";
 
 let n = 0;
 
@@ -15,16 +14,4 @@ export async function makeUser(overrides: { email?: string; password?: string; n
     },
   });
   return { ...user, password };
-}
-
-export function clientInput(overrides: Partial<ClientInput> = {}): ClientInput {
-  n += 1;
-  return {
-    firstName: "Test",
-    lastName: `Client${n}`,
-    email: `client${n}@example.com`,
-    taxYear: 2024,
-    filingStatus: "SINGLE",
-    ...overrides,
-  };
 }

@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { logoutAction } from "@/app/actions/auth";
 import { Logo } from "@/components/logo";
-import { MainNav } from "@/components/nav-link";
 import { SubmitButton } from "@/components/submit-button";
 import { requireUser } from "@/server/auth/guard";
 
@@ -16,7 +15,6 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-4 sm:px-6">
           <Logo href="/dashboard" />
-          <MainNav />
           <div className="ml-auto">
             <Suspense fallback={<div className="h-8 w-40 animate-pulse rounded bg-slate-100" />}>
               <UserMenu />

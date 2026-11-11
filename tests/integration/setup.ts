@@ -7,7 +7,7 @@ const { db } = await import("@/server/db");
 
 beforeEach(async () => {
   await db.$executeRawUnsafe(
-    'TRUNCATE "Client", "Session", "LoginAttempt", "User" RESTART IDENTITY CASCADE',
+    'TRUNCATE "Session", "LoginAttempt", "User" RESTART IDENTITY CASCADE',
   );
 });
 

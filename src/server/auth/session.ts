@@ -7,6 +7,7 @@ export const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 export const SESSION_REFRESH_MS = SESSION_TTL_MS / 2;
 
 export type SessionUser = { id: string; email: string; name: string; role: "ADMIN" | "PREPARER" };
+export type ValidSession = { id: string; user: SessionUser; createdAt: Date; expiresAt: Date };
 
 export async function createSession(userId: string, now = new Date()) {
   const token = generateSessionToken();
@@ -22,7 +23,7 @@ export async function createSession(userId: string, now = new Date()) {
 export async function validateSessionToken(
   token: string,
   now = new Date(),
-): Promise<{ user: SessionUser; expiresAt: Date } | null> {
+): Promise<ValidSession | null> {
   const session = await db.session.findUnique({
     where: { tokenHash: hashToken(token) },
     include: { user: { select: { id: true, email: true, name: true, role: true } } },
@@ -39,7 +40,7 @@ export async function validateSessionToken(
     expiresAt = new Date(now.getTime() + SESSION_TTL_MS);
     await db.session.update({ where: { id: session.id }, data: { expiresAt, lastSeenAt: now } });
   }
-  return { user: session.user, expiresAt };
+  return { id: session.id, user: session.user, createdAt: session.createdAt, expiresAt };
 }
 
 export async function invalidateSession(token: string) {

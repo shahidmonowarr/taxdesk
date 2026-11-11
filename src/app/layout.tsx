@@ -7,7 +7,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: { default: "TaxDesk", template: "%s · TaxDesk" },
-  description: "A client workspace for tax preparers. Demo project with dummy data.",
+  description: "A base project for a tax-preparation web app: authentication and database access. Dummy data only.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

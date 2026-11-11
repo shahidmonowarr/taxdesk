@@ -3,15 +3,23 @@ import { DEMO, signIn } from "./helpers";
 
 test.describe("authentication", () => {
   test("a protected page redirects to login and returns there after sign-in", async ({ page }) => {
-    await page.goto("/clients?q=garcia");
-    await expect(page).toHaveURL(/\/login\?next=%2Fclients%3Fq%3Dgarcia$/);
+    await page.goto("/dashboard?from=email");
+    await expect(page).toHaveURL(/\/login\?next=%2Fdashboard%3Ffrom%3Demail$/);
 
     await page.getByLabel("Email").fill(DEMO.email);
     await page.getByLabel("Password").fill(DEMO.password);
     await page.getByRole("button", { name: "Sign in" }).click();
 
-    await expect(page).toHaveURL(/\/clients\?q=garcia$/);
-    await expect(page.getByRole("cell", { name: "Garcia, Maria" })).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboard\?from=email$/);
+    await expect(page.getByTestId("welcome-name")).toHaveText(DEMO.name);
+  });
+
+  test("an off-site next= parameter is ignored (no open redirect)", async ({ page }) => {
+    await page.goto("/login?next=//evil.example.com");
+    await page.getByLabel("Email").fill(DEMO.email);
+    await page.getByLabel("Password").fill(DEMO.password);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
   });
 
   test("shows field errors and keeps the email after a failed sign-in", async ({ page }) => {
@@ -45,7 +53,7 @@ test.describe("authentication", () => {
 
     // Replaying the old cookie must not get back in.
     await context.addCookies([stolen]);
-    const res = await page.request.get("/api/clients");
+    const res = await page.request.get("/api/me");
     expect(res.status()).toBe(401);
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/login$/);
@@ -67,6 +75,6 @@ test.describe("authentication", () => {
     await page.getByLabel("Confirm password").fill("LongEnough1");
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
-    await expect(page.getByTestId("stat-total")).toHaveText("0");
+    await expect(page.getByTestId("welcome-name")).toHaveText("New Preparer");
   });
 });
