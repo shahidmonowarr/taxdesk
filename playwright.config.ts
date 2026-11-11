@@ -7,6 +7,9 @@ const databaseUrl = process.env.TEST_DATABASE_URL;
 
 export default defineConfig({
   testDir: "tests/e2e",
+  // Not the default "test-results/": Playwright empties its outputDir on start,
+  // which would delete the unit/integration JUnit files written beside it.
+  outputDir: "test-results/e2e-artifacts",
   globalSetup: "tests/e2e/global-setup.ts",
   fullyParallel: false, // tests share one seeded database
   workers: 1,
@@ -14,7 +17,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI
     ? [["github"], ["html", { open: "never" }], ["junit", { outputFile: "test-results/e2e-junit.xml" }]]
-    : [["list"], ["html", { open: "never" }]],
+    : [["list"], ["html", { open: "never" }], ["junit", { outputFile: "test-results/e2e-junit.xml" }]],
   use: {
     baseURL,
     trace: "retain-on-failure",

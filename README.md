@@ -7,7 +7,7 @@ It is deliberately small. The point is the foundation: authentication done prope
 **Live demo:** _<add Vercel URL>_
 **Demo login:** `demo@taxdesk.dev` / `DemoPass2026`
 
-[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+**Latest test run:** [TEST_RESULTS.md](TEST_RESULTS.md) — 63/63 passing
 
 ---
 
@@ -89,13 +89,15 @@ tests/unit · tests/integration · tests/e2e
 
 ## Tests
 
+Every test name and its result from the latest full run is in **[TEST_RESULTS.md](TEST_RESULTS.md)**. Regenerate it with `npm run test:report`, which runs all three suites and writes the file from their JUnit output.
+
 | Suite | What it proves | Command |
 |---|---|---|
 | Unit (32) | Zod rules, argon2 hashing, token format, open-redirect guard | `npm test` |
 | Integration (20) | Against a real Postgres: registration, login, lockout, session expiry/sliding/revocation, CRUD, **cross-user isolation** | `npm run test:integration` |
 | End-to-end (11) | Real browser against a production build: redirect-and-return, validation messages, cookie flags, logout revocation, full client CRUD, duplicate handling, 404, JSON API, health | `npm run test:e2e` |
 
-CI runs on every push: lint, typecheck and unit tests, then integration and end-to-end tests against a Postgres 17 service container. Each run writes a results table to the job summary and uploads the Playwright HTML report as an artifact.
+`.github/workflows/ci.yml` runs the same checks on every push: lint, typecheck and unit tests, then integration and end-to-end tests against a Postgres 17 service container. Each run writes a results table to the job summary and uploads the Playwright HTML report as an artifact.
 
 The same end-to-end suite can run against the deployed demo without resetting its data:
 
